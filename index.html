@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FreeFlix Music</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: white;
+    }
+    header {
+      background-color: #1f1f1f;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      color: #ff2d55;
+      letter-spacing: 2px;
+    }
+    #searchBar {
+      padding: 8px 12px;
+      border-radius: 20px;
+      border: none;
+      width: 200px;
+      font-size: 16px;
+    }
+    main {
+      padding: 20px 30px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .playlist-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 15px;
+      padding-bottom: 20px;
+    }
+    .playlist {
+      background-color: #222;
+      border-radius: 12px;
+      width: 160px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .playlist:hover {
+      transform: scale(1.05);
+    }
+    .playlist img {
+      width: 100%;
+      border-radius: 12px 12px 0 0;
+    }
+    .playlist .title {
+      padding: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+      height: 50px;
+      overflow: hidden;
+    }
+    #songList {
+      margin-top: 20px;
+      max-width: 600px;
+    }
+    #songList ul {
+      list-style: none;
+      padding: 0;
+    }
+    #songList li {
+      padding: 10px 0;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    #songList li:hover {
+      background-color: #222;
+    }
+    #player {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: #181818;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    #player button {
+      background-color: transparent;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #player .song-info {
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FreeFlix Music</h1>
+    <input type="search" id="searchBar" placeholder="Search music..." />
+  </header>
+
+  <main>
+    <section>
+      <h2>Featured Playlists</h2>
+      <div class="playlist-container" id="playlists">
+        <div class="playlist" data-playlist="popHits">
+          <img src="https://i.imgur.com/5YhD0cT.jpg" alt="Pop Hits" />
+          <div class="title">Pop Hits</div>
+        </div>
+        <div class="playlist" data-playlist="rockClassics">
+          <img src="https://i.imgur.com/RS3o0tT.jpg" alt="Rock Classics" />
+          <div class="title">Rock Classics</div>
+        </div>
+        <div class="playlist" data-playlist="chillVibes">
+          <img src="https://i.imgur.com/5D1IHGc.jpg" alt="Chill Vibes" />
+          <div class="title">Chill Vibes</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="songList">
+      <h2>Songs</h2>
+      <ul id="songsUl">
+        <!-- Songs load here dynamically -->
+      </ul>
+    </section>
+  </main>
+
+  <div id="player">
+    <button id="playPauseBtn">▶️</button>
+    <div class="song-info" id="currentSong">No song playing</div>
+    <audio id="audioPlayer" controls></audio>
+  </div>
+
+  <script>
+    const playlists = {
+      popHits: [
+        { title: 'Sunny Day', artist: 'Artist A', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+        { title: 'Dance With Me', artist: 'Artist B', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+      ],
+      rockClassics: [
+        { title: 'Rock Anthem', artist: 'Artist C', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+        { title: 'Guitar Solo', artist: 'Artist D', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+      ],
+      chillVibes: [
+        { title: 'Calm Waters', artist: 'Artist E', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
+        { title: 'Evening Breeze', artist: 'Artist F', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+      ],
+    };
+
+    const playlistsContainer = document.getElementById('playlists');
+    const songsUl = document.getElementById('songsUl');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const currentSongInfo = document.getElementById('currentSong');
+    const searchBar = document.getElementById('searchBar');
+
+    let currentPlaylist = null;
+    let currentSongIndex = -1;
+
+    function loadSongs(playlistName) {
+      currentPlaylist = playlists[playlistName];
+      currentSongIndex = -1;
+      songsUl.innerHTML = '';
+
+      if (!currentPlaylist) return;
+
+      currentPlaylist.forEach((song, idx) => {
+        const li = document.createElement('li');
+        li.textContent = `${song.title} — ${song.artist}`;
+        li.dataset.index = idx;
+        li.addEventListener('click', () => {
+          playSong(idx);
+        });
+        songsUl.appendChild(li);
+      });
+    }
+
+    function playSong(index) {
+      if (!currentPlaylist || index < 0 || index >= currentPlaylist.length) return;
+
+      const song = currentPlaylist[index];
+      audioPlayer.src = song.url;
+      audioPlayer.play();
+      currentSongIndex = index;
+      currentSongInfo.textContent = `${song.title} — ${song.artist}`;
+      playPauseBtn.textContent = '⏸️';
+    }
+
+    playPauseBtn.addEventListener('click', () => {
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+        playPauseBtn.textContent = '⏸️';
+      } else {
+        audioPlayer.pause();
+        playPauseBtn.textContent = '▶️';
+      }
+    });
+
+    playlistsContainer.addEventListener('click', (e) => {
+      const playlistDiv = e.target.closest('.playlist');
+      if (!playlistDiv) return;
+      const playlistName = playlistDiv.dataset.playlist;
+      loadSongs(playlistName);
+    });
+
+    // Search function
+    searchBar.addEventListener('input', () => {
+      const query = searchBar.value.toLowerCase();
+      songsUl.innerHTML = '';
+      if (!currentPlaylist) return;
+
+      currentPlaylist.forEach((song, idx) => {
+        if (song.title.toLowerCase().includes(query) || song.artist.toLowerCase().includes(query)) {
+          const li = document.createElement('li');
+          li.textContent = `${song.title} — ${song.artist}`;
+          li.dataset.index = idx;
+          li.addEventListener('click', () => {
+            playSong(idx);
+          });
+          songsUl.appendChild(li);
+        }
+      });
+    });
+
+  </script>
+</body>
+</html>
